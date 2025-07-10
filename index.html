@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Levenshtein Edit Distance</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+
+    input, button, select {
+      padding: 8px;
+      margin: 5px;
+      border-radius: 10px;
+    }
+
+    table {
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    th, td {
+      border: 1px solid #555;
+      padding: 5px 10px;
+      text-align: center;
+    }
+
+    .output {
+      margin-top: 15px;
+    }
+
+    button {
+      background-color: #94b1f1;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #b9ccf3;
+    }
+
+    .flex-container {
+      display: flex;
+      gap: 40px;
+    }
+
+    #explanationBox {
+      max-width: 400px;
+    }
+  </style>
+</head>
+
+<body>
+  <h2>Levenshtein Edit Distance Calculator</h2>
+
+  <label>Select a pair:</label><br>
+  <select id="presetSelector" onchange="handleSelection()">
+    <option value="0">Levenshtein & Lavenstaein</option>
+    <option value="1">TryHackMe & TriHackingMe</option>
+    <option value="2">Optimization & Progressive</option>
+    <option value="3">This is easy & This is easy</option>
+    <option value="custom">Custom</option>
+  </select><br>
+
+  <label>First String:</label><br>
+  <input type="text" id="str1"><br>
+
+  <label>Convert to Second String:</label><br>
+  <input type="text" id="str2"><br>
+
+  <button onclick="calculateDistance()">Convert</button>
+
+  <div class="output">
+    <h3>Edit Distance: <span id="distanceResult"></span></h3>
+    <div class="flex-container">
+      <div id="matrixContainer"></div>
+      <div id="explanationBox">
+        <h3>Explanation Steps:</h3>
+        <ul id="stepsList"></ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const presets = [
+      ["Levenshtein", "Lavenstaein"],
+      ["TryHackMe", "TriHackingMe"],
+      ["Optimization", "Progressive"],
+      ["This is easy", "This is easy"]
+    ];
+
+    function handleSelection() {
+      const selector = document.getElementById("presetSelector");
+      const str1Field = document.getElementById("str1");
+      const str2Field = document.getElementById("str2");
+
+      if (selector.value === "custom") {
+        str1Field.value = "";
+        str2Field.value = "";
+      } else {
+        const [preset1, preset2] = presets[parseInt(selector.value)];
+        str1Field.value = preset1;
+        str2Field.value = preset2;
+      }
+    }
+
+    function calculateDistance() {
+      const str1 = document.getElementById('str1').value;
+      const str2 = document.getElementById('str2').value;
+
+      const m = str1.length;
+      const n = str2.length;
+      const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+
+      // Build matrix
+      for (let i = 0; i <= m; i++) dp[i][0] = i;
+      for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+      for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+          if (str1[i - 1] === str2[j - 1]) {
+            dp[i][j] = dp[i - 1][j - 1];
+          } else {
+            dp[i][j] = 1 + Math.min(
+              dp[i - 1][j],    // Deletion
+              dp[i][j - 1],    // Insertion
+              dp[i - 1][j - 1] // Substitution
+            );
+          }
+        }
+      }
+
+      // here we will display edit distance
+      document.getElementById('distanceResult').textContent = dp[m][n];
+
+      // here we will generate matrix table
+      let tableHTML = '<table><tr><th></th><th></th>';
+      for (let j = 0; j < n; j++) {
+        tableHTML += `<th>${str2[j]}</th>`;
+      }
+      tableHTML += '</tr>';
+
+      for (let i = 0; i <= m; i++) {
+        tableHTML += '<tr>';
+        if (i === 0) {
+          tableHTML += '<th></th>';
+        } else {
+          tableHTML += `<th>${str1[i - 1]}</th>`;
+        }
+        for (let j = 0; j <= n; j++) {
+          tableHTML += `<td>${dp[i][j]}</td>`;
+        }
+        tableHTML += '</tr>';
+      }
+
+      tableHTML += '</table>';
+      document.getElementById('matrixContainer').innerHTML = tableHTML;
+
+      // Explanation logic
+      const steps = [];
+      let i = m, j = n;
+
+      while (i > 0 || j > 0) {
+        if (i > 0 && j > 0 && str1[i - 1] === str2[j - 1]) {
+          i--; j--; // no change
+        } else if (i > 0 && j > 0 && dp[i][j] === dp[i - 1][j - 1] + 1) {
+          steps.unshift(`${str1[i - 1]} → ${str2[j - 1]} (substituted)`);
+          i--; j--;
+        } else if (i > 0 && dp[i][j] === dp[i - 1][j] + 1) {
+          steps.unshift(`remove ${str1[i - 1]}`);
+          i--;
+        } else if (j > 0 && dp[i][j] === dp[i][j - 1] + 1) {
+          steps.unshift(`insert ${str2[j - 1]}`);
+          j--;
+        }
+      }
+
+      
+      const stepsList = document.getElementById("stepsList");
+      stepsList.innerHTML = "";
+      if (steps.length === 0) {
+        stepsList.innerHTML = "<li>Strings are identical (no operations needed).</li>";
+      } else {
+        steps.forEach(step => {
+          const li = document.createElement("li");
+          li.textContent = step;
+          stepsList.appendChild(li);
+        });
+      }
+    }
+
+    window.onload = () => {
+      handleSelection();
+    };
+  </script>
+</body>
+</html>
